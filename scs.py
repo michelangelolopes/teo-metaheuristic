@@ -132,7 +132,7 @@ def simulated_annealing(sequences_set, t_min, t_max):
     print("greedy_length: ", len(best_sequence))
     print(best_sequence)
     
-    better = best_sequence
+    better = 1200
     count_equal = 0
     while(t > t_min):
         neighboor_sequence, neighboor_order = find_random_neighboor_sequence(sequences_set, best_order)
@@ -145,15 +145,15 @@ def simulated_annealing(sequences_set, t_min, t_max):
         if fitness <= 0 or (fitness > 0 and probability_coeficient <= decision_coeficient):
             best_sequence, best_order = neighboor_sequence, neighboor_order
             count_equal = 0
+            if(better > len(best_sequence)):
+                better = len(best_sequence)
 
-        if(len(better) > len(best_sequence)):
-            better = best_sequence
 
         t = t * random.uniform(0.8, 0.99)
         #t = t * (math.exp((random.uniform(0.1, 0.9) * -t)/sigma)) 
-    print(count_equal)
-    print("better_length: ", len(better))
-    print(better)
+    #print(count_equal)
+    print("better_length: ", better)
+    #print(better)
     print("sa_length: ", len(best_sequence))
     print(best_sequence)
     return best_sequence, best_order
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     t_min = 0.0005
     '''
     t_min = 0.1
-    t_max = 100000000
+    t_max = 1000000000
 
     #sequences_set = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
     #overlay_first_heuristic(["abbb", "bab", "bba"])
