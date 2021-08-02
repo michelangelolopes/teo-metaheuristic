@@ -17,7 +17,7 @@ def common_supersequence(sequence_1, sequence_2):
     overlay_count = overlay(sequence_1, sequence_2) #calculamos a quantidade de sobreposição possível na sequência
     return sequence_1 + sequence_2[overlay_count:len(sequence_2)] #retornamos a string que concatena as sequências, desconsiderando os char iniciais da seq2, envolvidos na sobreposição
 
-def commom_supersequence_list(sequences_set, order):
+def common_supersequence_list(sequences_set, order):
     overlay_seq = sequences_set[order[0]]
     for j in range(1, len(order)):
         overlay_seq = common_supersequence(overlay_seq, sequences_set[order[j]]) #calculamos a superseq das seqs
@@ -57,7 +57,7 @@ def overlay_first_heuristic(sequences_set):
 
         for i in heuristic_set_index: #verificamos a lista de índices de seq
             if(isinstance(i, list)): #se o índice for uma lista de índices de seq
-                heuristic_set_value.append(commom_supersequence_list(sequences_set, i))
+                heuristic_set_value.append(common_supersequence_list(sequences_set, i))
             else:
                 heuristic_set_value.append(sequences_set[i])
         #ao final, teremos uma lista com as sequências e não seus indíces
@@ -107,7 +107,7 @@ def overlay_first_heuristic(sequences_set):
     #endwhile    
 
     #print("FINAL", heuristic_set_index)
-    overlay_seq = commom_supersequence_list(sequences_set, heuristic_set_index[0])
+    overlay_seq = common_supersequence_list(sequences_set, heuristic_set_index[0])
     #print(overlay_seq)
 
     return overlay_seq, heuristic_set_index[0]
@@ -122,44 +122,64 @@ def random_heuristic(sequences_set):
 
     #print(order)
     
-    return commom_supersequence_list(sequences_set, order), order
+    return common_supersequence_list(sequences_set, order), order
 
-'''def grasp_construction():
-    heuristic_set_index = list(range(0, len(sequences_set)))
-    random.randint(0, len(sequences_set))
+def grasp_construction(sequences_set):
+    #heuristic_set_index = list(range(0, len(sequences_set)))
+    #random.randint(0, len(sequences_set) - 1)
+    grasp_sequences = [] + sequences_set
+    max_overlay = -1
+    constructed_solution = []
 
+    for i in range(0, len(grasp_sequences)): #buscamos as sequências com maior sobreposição
+        for j in range(0, len(grasp_sequences)):
+            if(i == j):
+                continue
 
+            overlay_count = overlay(grasp_sequences[i], grasp_sequences[j])
 
-    while len(heuristic_set_index) > 1:
+            if(max_overlay < overlay_count):
+                max_overlay = overlay_count
+                max_overlay_seq = [[i, j]]
+            elif(max_overlay == overlay_count):
+                max_overlay_seq.append([i, j])
+
+    #print(grasp_sequences)
+    #print(max_overlay_seq)
+    choosed = random.randint(0, len(max_overlay_seq) - 1)
+    cur_seq, next_seq = max_overlay_seq[choosed]
+    #print(cur_seq, next_seq)
+    constructed_solution.append(cur_seq)
+    constructed_solution.append(next_seq)
+    #print(cur_seq, next_seq)
+    #grasp_sequences.remove(sequences_set[cur_seq])
+    #grasp_sequences.remove(sequences_set[next_seq])
+    
+    while(len(constructed_solution) < len(sequences_set)):
         max_overlay = -1
-        max_overlay_set = []
-        heuristic_set_value = []
 
-        for i in heuristic_set_index: #verificamos a lista de índices de seq
-            if(isinstance(i, list)): #se o índice for uma lista de índices de seq
-                heuristic_set_value.append(commom_supersequence_list(sequences_set, i))
-            else:
-                heuristic_set_value.append(sequences_set[i])
-        #ao final, teremos uma lista com as sequências e não seus indíces
-        
-        #print(heuristic_set_index)
-        #print(heuristic_set_value)
+        for j in range(0, len(grasp_sequences)): #buscamos as sequências com maior sobreposição
+            if next_seq == j or j in constructed_solution:
+                continue
 
-        for i in range(0, len(heuristic_set_value)): #buscamos as sequências com maior sobreposição
-            for j in range(0, len(heuristic_set_value)):
-                if(i == j):
-                    continue
+            overlay_count = overlay(sequences_set[next_seq], grasp_sequences[j])
 
-                overlay_count = overlay(heuristic_set_value[i], heuristic_set_value[j])
+            if(max_overlay < overlay_count):
+                max_overlay = overlay_count
+                max_overlay_seq = [[j]]
+            elif(max_overlay == overlay_count):
+                max_overlay_seq.append([j])
 
-                if(max_overlay < overlay_count):
-                    max_overlay = overlay_count
-                    max_overlay_set = [[i, j]]
-                #elif(max_overlay == overlay_count):
-                #    max_overlay_set.append([i, j])
-            #endfor
+        choosed = random.randint(0, len(max_overlay_seq) - 1)
+        next_seq = max_overlay_seq[choosed][0]
+        #print(grasp_sequences)
+        #print(max_overlay_seq)
+        #print(grasp_sequences[next_seq], next_seq)
+        constructed_solution.append(next_seq)
+        #grasp_sequences.pop(next_seq)
         #endfor
-'''
+    return common_supersequence_list(sequences_set, constructed_solution), constructed_solution
+
 
 #def grasp_localsearch()
 
@@ -169,7 +189,7 @@ def find_random_neighboor_sequence(sequences_set, sequence_order):
     new_order[rand_sequence] = sequence_order[rand_sequence + 1]
     new_order[rand_sequence + 1] = sequence_order[rand_sequence]
 
-    return commom_supersequence_list(sequences_set, new_order), new_order
+    return common_supersequence_list(sequences_set, new_order), new_order
 
 def simulated_annealing(sequences_set, t_min, t_max):
     t = t_max
@@ -190,12 +210,14 @@ def simulated_annealing(sequences_set, t_min, t_max):
         count_equal += 1
         if fitness <= 0 or (fitness > 0 and probability_coeficient <= decision_coeficient):
             best_sequence, best_order = neighboor_sequence, neighboor_order
+            #print(count_equal)
             count_equal = 0
             if(better > len(best_sequence)):
                 better = len(best_sequence)
 
 
-        t = t * random.uniform(0.8, 0.99)
+        t = t * 0.99
+        #t = t * random.uniform(0.8, 0.99)
         #t = t * (math.exp((random.uniform(0.1, 0.9) * -t)/sigma)) 
     #print(count_equal)
     print("better_length: ", better)
@@ -211,15 +233,15 @@ if __name__ == "__main__":
     t_min = 0.0005
     '''
     t_min = 0.1
-    t_max = 1000000000
+    t_max = 100000000000000000
 
     sequences_set = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
-    random_heuristic(sequences_set)
+    #random_heuristic(sequences_set)
     #overlay_first_heuristic(["abbb", "bab", "bba"])
     #print(sequences_set)
-    
     #sequences_set = get_data("scs_problem_samples.txt")
-    #msc, order = simulated_annealing(sequences_set, t_min, t_max)
+    print(grasp_construction(sequences_set))
+    msc, order = simulated_annealing(sequences_set, t_min, t_max)
     #print(common_supersequence("bba", "bab"))
     #print([1,2] + [3,4])
 
