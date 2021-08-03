@@ -6,22 +6,22 @@ import data_generator as dg
 #sequences_list = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
 sequences_list = dg.get_data("samples.txt")
 
-def overlay(sequence_1, sequence_2): #calcula a quantidade de caracteres que podem ser sobrepostos, do final da sequencia 1 com o começo da sequência 2
+def overlay(seq1, seq2): #calcula a quantidade de caracteres que podem ser sobrepostos, do final da sequencia 1 com o começo da sequência 2
     '''
     exemplo: (aaa, aab) -> aa -> count = 2
     '''
-    seq1_len = len(sequence_1) - 1
-    if len(sequence_2) >= len(sequence_1):
-        seq2_len = len(sequence_1) - 1 #se a seq2 for maior, igualamos o comprimento; se for igual, tanto faz qual comprimento usar
-    elif len(sequence_2) < len(sequence_1):
-        seq2_len = len(sequence_2) - 1 #se a seq2 for menor, utilizamos o próprio comprimento de seq2
+    seq1_len = len(seq1) - 1
+    if len(seq2) >= len(seq1):
+        seq2_len = len(seq1) - 1 #se a seq2 for maior, igualamos o comprimento; se for igual, tanto faz qual comprimento usar
+    elif len(seq2) < len(seq1):
+        seq2_len = len(seq2) - 1 #se a seq2 for menor, utilizamos o próprio comprimento de seq2
 
     count = 0
     while count == 0 and seq2_len > -1:
         aux = seq1_len #para não perder o comprimento da seq1 e evitar o calculo de len()
 
         for i in range(seq2_len, -1, -1):
-            if sequence_1[aux] == sequence_2[i]: #char igual, incrementa o contador de sobreposição e decrementa o contador de char de seq1
+            if seq1[aux] == seq2[i]: #char igual, incrementa o contador de sobreposição e decrementa o contador de char de seq1
                 count += 1
                 aux -= 1
             else: #a sobreposição não funcionou, contador é zerado para a próxima iteração
@@ -32,12 +32,12 @@ def overlay(sequence_1, sequence_2): #calcula a quantidade de caracteres que pod
         
     return count
 
-def common_supersequence(sequence_1, sequence_2): #calcula a supersequência comum a duas sequências
+def common_supersequence(seq1, seq2): #calcula a supersequência comum a duas sequências
     '''
     exemplo: (aaa, aab) -> overlay_count = 2 -> aaa + aab[2:3] -> aaab
     '''
-    overlay_count = overlay(sequence_1, sequence_2) #calculamos a quantidade de sobreposição possível na sequência
-    supersequence = sequence_1 + sequence_2[overlay_count:len(sequence_2)] #retornamos a string que concatena as sequências, desconsiderando os char iniciais da seq2, envolvidos na sobreposição
+    overlay_count = overlay(seq1, seq2) #calculamos a quantidade de sobreposição possível na sequência
+    supersequence = seq1 + seq2[overlay_count:len(seq2)] #retornamos a string que concatena as sequências, desconsiderando os char iniciais da seq2, envolvidos na sobreposição
     return supersequence
 
 def common_supersequence_list(order): #calcula a supersequência comum para sequências em uma lista ordenada
@@ -49,197 +49,182 @@ def common_supersequence_list(order): #calcula a supersequência comum para sequ
         overlay_seq = common_supersequence(overlay_seq, sequences_list[order[j]])
     return overlay_seq
 
-def greedy_algorithm(): #encontra solução escolhendo as primeiras sequências com maior sobreposição
-    heuristic_set_index = list(range(0, len(sequences_list)))
+def greedy_algorithm(): #encontra a solução do problema escolhendo as primeiras sequências com maior sobreposição
+    seq_list_indexes = list(range(0, len(sequences_list))) #lista com os índices da lista de sequências; com a execução do algoritmo, irá conter também sublistas de índices, para simbolizar sequências sobrepostas
 
-    while len(heuristic_set_index) > 1:
-        max_overlay = -1
-        max_overlay_set = []
-        heuristic_set_value = []
+    while len(seq_list_indexes) > 1: #o algoritmo para, quando houver apenas uma sublista de índices
+        best_overlay_count = -1
+        best_overlay_list_count = []
+        seq_list_values = [] #lista com as sequências associadas aos elementos da lista de índices
 
-        for i in heuristic_set_index: #verificamos a lista de índices de seq; ao final, teremos uma lista com as sequências e não seus indíces
-            if(isinstance(i, list)): #se o índice for uma lista de índices de seq
-                heuristic_set_value.append(common_supersequence_list(i))
-            else:
-                heuristic_set_value.append(sequences_list[i])
+        for i in seq_list_indexes: #verificamos a lista de índices de seq; ao final, teremos uma lista com as sequências e não seus indíces
+            if(isinstance(i, list)): #se o índice for uma sublista de índices, precisamos da supersequência associada a sublista
+                seq_list_values.append(common_supersequence_list(i))
+            else: #se for apenas um índice, adicionamos a sequência associada ao índice apenas
+                seq_list_values.append(sequences_list[i])
 
-        for i in range(0, len(heuristic_set_value)): #buscamos as sequências com maior sobreposição
-            for j in range(0, len(heuristic_set_value)):
+        for i in range(0, len(seq_list_values)): #buscamos as sequências com maior sobreposição
+            for j in range(0, len(seq_list_values)):
                 if(i == j):
                     continue
 
-                overlay_count = overlay(heuristic_set_value[i], heuristic_set_value[j])
+                overlay_count = overlay(seq_list_values[i], seq_list_values[j])
 
-                if(max_overlay < overlay_count):
-                    max_overlay = overlay_count
-                    max_overlay_set = [[i, j]]
+                if(best_overlay_count < overlay_count): #quando duas sequências tiveram a maior sobreposição da iteração
+                    best_overlay_count = overlay_count #atualizamos a variável de controle da melhor sobreposição da iteração
+                    best_overlay_list_count = [i, j] #armazenamos uma lista com os índices das sequências com maior sobreposição; índices relacionados à lista de índices
 
         superseq = []
         toremove = []
-        for i in max_overlay_set[0]:
-            aux = heuristic_set_index[i]
-            if isinstance(aux, int):
-                superseq += [aux]
-            else:
-                superseq += aux
-            toremove.append(aux)
-        for i in toremove:
-            heuristic_set_index.remove(i)
+        for i in best_overlay_list_count: #convertemos os índices da lista de índices para os índices da lista de sequências
+            aux = seq_list_indexes[i] #pegamos o índice associado na lista de índices
             
-        heuristic_set_index.append(superseq)
+            if isinstance(aux, int): #se for um índice inteiro, adicionamos como elemento da lista de supersequência
+                superseq.append(aux)
+            else: #se for uma sublista de índices, concatenamos com os índices da lista de supersequência
+                superseq += aux
+            toremove.append(aux) #adicionamos os índices a serem removidos por valor, da lista de índices
+        
+        for i in toremove: #removemos os índices com maior sobreposição da lista de índices
+            seq_list_indexes.remove(i)
+            
+        seq_list_indexes.append(superseq) #adicionamos a supersequência com maior sobreposição à lista de índices
 
-    overlay_seq = common_supersequence_list(heuristic_set_index[0])
+    return common_supersequence_list(seq_list_indexes[0]), seq_list_indexes[0]
 
-    return overlay_seq, heuristic_set_index[0]
-
-def random_heuristic():
-    order = []
+def random_heuristic(): #gera uma supersequência com ordenação aleatória das sequências
+    indexes_order = []
     
-    while(len(order) < len(sequences_list)):
+    while(len(indexes_order) < len(sequences_list)):
         new_seq = random.randint(0, len(sequences_list) - 1)
-        if new_seq not in order:
-            order.append(new_seq)
+        if new_seq not in indexes_order:
+            indexes_order.append(new_seq)
     
-    return common_supersequence_list(order), order
+    return common_supersequence_list(indexes_order), indexes_order
 
-def find_random_neighboor_sequence(sequence_order):
-    rand_sequence = random.randint(0, len(sequence_order) - 2) #vizinho será obtido alterando a posição de uma sequência à direita; assim a última sequência da lista não trocará com ngm (a não ser q a seq anterior a ela faça isso)
-    new_order = [] + sequence_order
-    new_order[rand_sequence] = sequence_order[rand_sequence + 1]
-    new_order[rand_sequence + 1] = sequence_order[rand_sequence]
+def find_random_neighboor(indexes_order): #encontra uma sequência vizinha, alterando a posição dos índices usados para formar a supersequência
+    rand_sequence = random.randint(0, len(indexes_order) - 2) #vizinho será obtido alterando a posição de uma sequência com outra sequência à direita; assim a última sequência da lista não trocará com ngm (a não ser q a seq anterior a ela faça isso)
+    new_order = [] + indexes_order
+    new_order[rand_sequence] = indexes_order[rand_sequence + 1]
+    new_order[rand_sequence + 1] = indexes_order[rand_sequence]
 
     return common_supersequence_list(new_order), new_order
 
-def simulated_annealing(t_min, t_max):
+def simulated_annealing(t_min, t_max): #verifica vizinhos com perturbação nos índices que compõe a supersequência atual, caminhando pelo espaço de busca
     t = t_max
-    #best_sequence, best_order = greedy_algorithm(sequences_list)
-    best_sequence, best_order = random_heuristic()
-    #print("greedy_length: ", len(best_sequence))
-    #print(best_sequence)
-    
-    better_length = len(best_sequence)
-    better_sequence = best_sequence
-    better_order = best_order
-    count_equal = 0
+    #best_sequence, best_indexes_order = greedy_algorithm(sequences_list) #solução gerada pelo algoritmo guloso que resolve o problema
+    best_sequence, best_indexes_order = random_heuristic() #solução inicial gerada por uma heurística aleatória
+    global_best_length = len(best_sequence)
+    global_best_sequence = best_sequence
+    global_best_indexes_order = best_indexes_order
+    #noimprove_count = 0
 
     while(t > t_min):
-        neighboor_sequence, neighboor_order = find_random_neighboor_sequence(best_order)
+        neighboor_sequence, neighboor_indexes_order = find_random_neighboor(best_indexes_order)
         fitness = len(neighboor_sequence) - len(best_sequence)
         probability_coeficient = random.uniform(0.0, 1.0)
         decision_coeficient = math.exp(-fitness/t)
-        count_equal += 1
+        #noimprove_count += 1
 
         if fitness <= 0 or (fitness > 0 and probability_coeficient <= decision_coeficient):
-            best_sequence, best_order = neighboor_sequence, neighboor_order
-            if(better_length > len(best_sequence)):
-                #print(count_equal)
-                count_equal = 0
-                better_length = len(best_sequence)
-                better_sequence = best_sequence
-                better_order = best_order
+            best_sequence, best_indexes_order = neighboor_sequence, neighboor_indexes_order
+            if(global_best_length > len(best_sequence)):
+                global_best_length = len(best_sequence)
+                global_best_sequence = best_sequence
+                global_best_indexes_order = best_indexes_order
+                #print(noimprove_count)
+                #noimprove_count = 0
 
         t = t * 0.99
         #t = t * random.uniform(0.8, 0.99)
         #t = t * (math.exp((random.uniform(0.1, 0.9) * -t)/sigma)) 
-    #print("better_length: ", better)
-    return better_sequence, better_order
+        
+    return global_best_sequence, global_best_indexes_order
 
-def find_grasp_neighboor_sequence(sequence_order):
-    #rand_sequence = random.randint(0, len(sequence_order) - 2) #vizinho será obtido alterando a posição de uma sequência à direita; assim a última sequência da lista não trocará com ngm (a não ser q a seq anterior a ela faça isso)
-    order_1 = [] + sequence_order
-    cur_length = common_supersequence_list(order_1)
-    for i in range(0, len(sequence_order) - 1):
-        order_2 = [] + order_1
-        order_2[i] = order_1[i + 1]
-        order_2[i + 1] = order_1[i]
+def find_grasp_neighboor_sequence(indexes_order): #encontra a melhor sequência vizinha, modificando os índices dois a dois
+    best_indexes_order = [] + indexes_order #lista ordenada de índices da solução inicial
+    best_length = len(common_supersequence_list(best_indexes_order)) #comprimento da supersequência associada a lista ordenada de índices da solução inicial
 
-        new_length = common_supersequence_list(order_2)
+    for i in range(0, len(indexes_order) - 1):
+        modified_indexes_order = [] + best_indexes_order
+        modified_indexes_order[i] = best_indexes_order[i + 1] #trocamos o índice i de modified_indexes_order pelo índice i+1
+        modified_indexes_order[i + 1] = best_indexes_order[i]
 
-        if new_length < cur_length:
-            order_1 = order_2
-            cur_length = new_length
+        new_sequence = common_supersequence_list(modified_indexes_order)
+        new_length = len(new_sequence)
 
-    return common_supersequence_list(order_1), order_1
+        if new_length < best_length:
+            best_indexes_order = modified_indexes_order
+            best_length = new_length
 
-def grasp_construction():
-    grasp_sequences = [] + sequences_list
-    max_overlay = -1
-    constructed_solution = []
+    return common_supersequence_list(best_indexes_order), best_indexes_order
 
-    for i in range(0, len(grasp_sequences)): #buscamos as sequências com maior sobreposição
-        for j in range(0, len(grasp_sequences)):
+def grasp_construction(): #constrói a solução inicial, uma lista ordenada de índices; verifica o par com maior sobreposição, escolhido aleatoriamente se houver mais de um; depois verifica um índice por vez, qual o próximo par com maior sobreposição
+    best_overlay_count = -1
+    constructed_indexes_order = []
+    total_indexes_count = len(sequences_list)
+
+    for i in range(0, len(sequences_list)): #geramos uma lista com os pares com maior sobreposição
+        for j in range(0, len(sequences_list)):
             if(i == j):
                 continue
 
-            overlay_count = overlay(grasp_sequences[i], grasp_sequences[j])
+            overlay_count = overlay(sequences_list[i], sequences_list[j])
 
-            if(max_overlay < overlay_count):
-                max_overlay = overlay_count
-                max_overlay_seq = [[i, j]]
-            elif(max_overlay == overlay_count):
-                max_overlay_seq.append([i, j])
+            if(best_overlay_count < overlay_count):
+                best_overlay_count = overlay_count
+                best_overlay_list = [[i, j]]
+            elif(best_overlay_count == overlay_count):
+                best_overlay_list.append([i, j])
 
-    choosed = random.randint(0, len(max_overlay_seq) - 1)
-    cur_seq, next_seq = max_overlay_seq[choosed]
-    constructed_solution.append(cur_seq)
-    constructed_solution.append(next_seq)
+    choosed_pair = random.randint(0, len(best_overlay_list) - 1) #escolhemos aleatoriamente um dos pares, como inicial
+    _, next_index = best_overlay_list[choosed_pair] #pegamos o segundo índice do par escolhido
+    constructed_indexes_order += best_overlay_list[choosed_pair] #adicionamos o par na nossa lista de índices construída
     
-    while(len(constructed_solution) < len(sequences_list)):
-        max_overlay = -1
+    while(len(constructed_indexes_order) < total_indexes_count): #para quando todos os índices tiverem sido adicionados
+        best_overlay_count = -1
+        best_overlay_list = []
 
-        for j in range(0, len(grasp_sequences)): #buscamos as sequências com maior sobreposição
-            if next_seq == j or j in constructed_solution:
+        for j in range(0, total_indexes_count): #geramos uma lista com os pares com maior sobreposição, sendo next_index o primeiro elemento
+            if next_index == j or j in constructed_indexes_order: #ignora índices que já estão na lista de índices construída
                 continue
 
-            overlay_count = overlay(sequences_list[next_seq], grasp_sequences[j])
-            #print(overlay_count)
+            overlay_count = overlay(sequences_list[next_index], sequences_list[j])
 
-            if(max_overlay < overlay_count):
-                max_overlay = overlay_count
-                max_overlay_seq = [[j]]
-            elif(max_overlay == overlay_count):
-                max_overlay_seq.append([j])
+            if(best_overlay_count < overlay_count):
+                best_overlay_count = overlay_count
+                best_overlay_list.append(j)
+            elif(best_overlay_count == overlay_count):
+                best_overlay_list.append(j)
 
-        choosed = random.randint(0, len(max_overlay_seq) - 1)
-        next_seq = max_overlay_seq[choosed][0]
-        constructed_solution.append(next_seq)
-        #print(constructed_solution)
+        choosed_pair = random.randint(0, len(best_overlay_list) - 1)
+        next_index = best_overlay_list[choosed_pair]
+        constructed_indexes_order.append(next_index)
         
-    return common_supersequence_list(constructed_solution), constructed_solution
+    return common_supersequence_list(constructed_indexes_order), constructed_indexes_order
 
-def grasp_localsearch(grasp_initial, grasp_initial_order):
-    #grasp_initial, grasp_initial_order = grasp_construction(sequences_list)
-    best_solution = len(grasp_initial)
+def grasp_localsearch(grasp_initial, grasp_initial_order): #verifica se os vizinhos são melhores que a solução inicial
+    best_length = len(grasp_initial)
     best_sequence = grasp_initial
-    best_order = grasp_initial_order
-    best_neighboor_solution = best_solution
+    best_indexes_order = grasp_initial_order
 
-    #print("grasp_local: ", best_solution, best_sequence, best_order)
+    best_neighboor_sequence, best_neighboor_order = find_grasp_neighboor_sequence(grasp_initial_order) #verifica entre os vizinhos qual o melhor
+    best_neighboor_length = len(best_neighboor_sequence)
 
-    while(best_solution < best_neighboor_solution):
-        best_neighboor_sequence, best_neighboor_order = find_grasp_neighboor_sequence(grasp_initial_order)
-        best_neighboor_solution = len(best_neighboor_sequence)
+    if best_length > best_neighboor_length: #se o melhor vizinho tiver comprimento menor que a solução inicial, atualiza
+        best_length = best_neighboor_length
+        best_sequence = best_neighboor_sequence
+        best_indexes_order = best_neighboor_order
 
-        if best_solution > best_neighboor_solution:
-            best_solution = best_neighboor_solution
-            best_sequence = best_neighboor_sequence
-            best_order = best_neighboor_order
-
-    #print("grasp_local: ", best_solution, best_sequence, best_order)
-    return best_sequence, best_order
+    return best_sequence, best_indexes_order
 
 def grasp(max_iter):
-    #print(best_order)
     grasp_initial, grasp_initial_order = grasp_construction()
-    #print("grasp_iter: ", grasp_initial, grasp_initial_order)
     best_sequence, best_order = grasp_localsearch(grasp_initial, grasp_initial_order)
     best_length = len(best_sequence)
 
     for i in range(0, max_iter):
-        #print("i: ", i)
-        #a = input()
         grasp_initial, grasp_initial_order = grasp_construction()
-        #print("grasp_iter: ", grasp_initial, grasp_initial_order)
         new_sequence, new_order = grasp_localsearch(grasp_initial, grasp_initial_order)
         new_length = len(new_sequence)
         
@@ -247,7 +232,6 @@ def grasp(max_iter):
             best_length = new_length
             best_sequence = new_sequence
             best_order = new_order
-    #print("grasp_local: ", best_length, best_sequence, best_order)
     return best_sequence, best_order
 
 if __name__ == "__main__":
@@ -260,16 +244,15 @@ if __name__ == "__main__":
     t_max = 1000000000
     max_iter = 500
 
-    #print(grasp_construction(sequences_list))
     solution1, order1 = greedy_algorithm()
     solution2, order2 = simulated_annealing(t_min, t_max)
     solution3, order3 = grasp(max_iter)
 
-    print("greedy: ", len(solution1))
-    print(solution1)
+    print("greedy_length: ", len(solution1))
+    #print(solution1)
 
-    print("sa: ", len(solution2))
-    print(solution2)
+    print("sa_length: ", len(solution2))
+    #print(solution2)
 
-    print("grasp: ", len(solution3))
-    print(solution3)
+    print("grasp_length: ", len(solution3))
+    #print(solution3)

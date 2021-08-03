@@ -4,7 +4,7 @@ def char_range(char_1, char_2): #gera um range de caracteres, de char_1 a char_2
     for char_code in range(ord(char_1), ord(char_2) + 1):
         yield chr(char_code)
 
-def set_data(data_file, sequences_list): #escreve um
+def set_data(data_file, sequences_list): #escreve uma lista de sequências geradas em um arquivo .txt
     data_file = open(data_file, "w")
 
     for i in sequences_list:
@@ -12,24 +12,25 @@ def set_data(data_file, sequences_list): #escreve um
     
     data_file.close()
 
-def get_data(data_file): #function to
+def get_data(data_file): #pega as sequências de um arquivo .txt e armazena em uma lista
     data_file = open(data_file, "r")
     sequences_list = data_file.readlines()
     length_count = 0
     for i in range(0, len(sequences_list)):
         sequences_list[i] = sequences_list[i].replace("\n", "")
         length_count += len(sequences_list[i])
-    #print("total_length:", length_count)
+    print("total_length:", length_count)
+    #print("---------------------------------------")
     data_file.close()
     return sequences_list
 
 if __name__ == "__main__":
-    alphabet = list(char_range('a', 'e'))
+    alphabet = list(char_range('a', 'h'))
     max_sequence_length = 20
-    min_sequence_length = 5
-    qtd_sequences = 100
+    min_sequence_length = 8
+    qtd_sequences = 50
     sequences_list = []
-    print(alphabet)
+    #print(alphabet)
 
     for i in range(0, qtd_sequences):
         sequence_length = random.randint(min_sequence_length, max_sequence_length - 1)
