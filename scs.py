@@ -94,7 +94,7 @@ def greedy_algorithm(): #encontra a solução do problema escolhendo as primeira
 
 def random_heuristic(): #gera uma supersequência com ordenação aleatória das sequências
     indexes_order = []
-    
+
     while(len(indexes_order) < len(sequences_list)):
         new_seq = random.randint(0, len(sequences_list) - 1)
         if new_seq not in indexes_order:
@@ -112,7 +112,7 @@ def find_random_neighboor(indexes_order): #encontra uma sequência vizinha, alte
 
 def simulated_annealing(t_min, t_max): #verifica vizinhos com perturbação nos índices que compõe a supersequência atual, caminhando pelo espaço de busca
     t = t_max
-    #best_sequence, best_indexes_order = greedy_algorithm(sequences_list) #solução gerada pelo algoritmo guloso que resolve o problema
+    #best_sequence, best_indexes_order = greedy_algorithm() #solução gerada pelo algoritmo guloso que resolve o problema
     best_sequence, best_indexes_order = random_heuristic() #solução inicial gerada por uma heurística aleatória
     global_best_length = len(best_sequence)
     global_best_sequence = best_sequence
@@ -256,3 +256,18 @@ if __name__ == "__main__":
 
     print("grasp_length: ", len(solution3))
     #print(solution3)
+
+'''
+seções:
+introdução
+revisão da literatura
+metodologias usadas
+resultados
+conclusão
+
+relatório - tabela - média das soluções - no mínimo 3 execuções - tempo
+sa_1
+sa_2
+grasp
+greedy
+'''
