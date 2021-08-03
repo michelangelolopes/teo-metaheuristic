@@ -46,7 +46,7 @@ def overlay(sequence_1, sequence_2):
         
     return count
 
-def overlay_first_heuristic(sequences_set):
+def greedy_algorithm(sequences_set):
     heuristic_set_index = list(range(0, len(sequences_set)))
 
     while len(heuristic_set_index) > 1:
@@ -99,6 +99,48 @@ def random_heuristic(sequences_set):
     
     return common_supersequence_list(sequences_set, order), order
 
+def find_random_neighboor_sequence(sequences_set, sequence_order):
+    rand_sequence = random.randint(0, len(sequence_order) - 2) #vizinho será obtido alterando a posição de uma sequência à direita; assim a última sequência da lista não trocará com ngm (a não ser q a seq anterior a ela faça isso)
+    new_order = [] + sequence_order
+    new_order[rand_sequence] = sequence_order[rand_sequence + 1]
+    new_order[rand_sequence + 1] = sequence_order[rand_sequence]
+
+    return common_supersequence_list(sequences_set, new_order), new_order
+
+def simulated_annealing(sequences_set, t_min, t_max):
+    t = t_max
+    #best_sequence, best_order = greedy_algorithm(sequences_set)
+    best_sequence, best_order = random_heuristic(sequences_set)
+    #print("greedy_length: ", len(best_sequence))
+    #print(best_sequence)
+    
+    better_length = len(best_sequence)
+    better_sequence = best_sequence
+    better_order = best_order
+    count_equal = 0
+
+    while(t > t_min):
+        neighboor_sequence, neighboor_order = find_random_neighboor_sequence(sequences_set, best_order)
+        fitness = len(neighboor_sequence) - len(best_sequence)
+        probability_coeficient = random.uniform(0.0, 1.0)
+        decision_coeficient = math.exp(-fitness/t)
+        count_equal += 1
+
+        if fitness <= 0 or (fitness > 0 and probability_coeficient <= decision_coeficient):
+            best_sequence, best_order = neighboor_sequence, neighboor_order
+            if(better_length > len(best_sequence)):
+                #print(count_equal)
+                count_equal = 0
+                better_length = len(best_sequence)
+                better_sequence = best_sequence
+                better_order = best_order
+
+        t = t * 0.99
+        #t = t * random.uniform(0.8, 0.99)
+        #t = t * (math.exp((random.uniform(0.1, 0.9) * -t)/sigma)) 
+    #print("better_length: ", better)
+    return better_sequence, better_order
+
 def grasp_construction(sequences_set):
     grasp_sequences = [] + sequences_set
     max_overlay = -1
@@ -130,6 +172,7 @@ def grasp_construction(sequences_set):
                 continue
 
             overlay_count = overlay(sequences_set[next_seq], grasp_sequences[j])
+            #print(overlay_count)
 
             if(max_overlay < overlay_count):
                 max_overlay = overlay_count
@@ -140,47 +183,68 @@ def grasp_construction(sequences_set):
         choosed = random.randint(0, len(max_overlay_seq) - 1)
         next_seq = max_overlay_seq[choosed][0]
         constructed_solution.append(next_seq)
+        #print(constructed_solution)
         
     return common_supersequence_list(sequences_set, constructed_solution), constructed_solution
 
+def grasp_localsearch(sequences_set, grasp_initial, grasp_initial_order):
+    #grasp_initial, grasp_initial_order = grasp_construction(sequences_set)
+    best_solution = len(grasp_initial)
+    best_sequence = grasp_initial
+    best_order = grasp_initial_order
+    best_neighboor_solution = best_solution
 
-#def grasp_localsearch()
+    #print("grasp_local: ", best_solution, best_sequence, best_order)
 
-def find_random_neighboor_sequence(sequences_set, sequence_order):
-    rand_sequence = random.randint(0, len(sequence_order) - 2) #vizinho será obtido alterando a posição de uma sequência à direita; assim a última sequência da lista não trocará com ngm (a não ser q a seq anterior a ela faça isso)
-    new_order = [] + sequence_order
-    new_order[rand_sequence] = sequence_order[rand_sequence + 1]
-    new_order[rand_sequence + 1] = sequence_order[rand_sequence]
+    while(best_solution < best_neighboor_solution):
+        best_neighboor_sequence, best_neighboor_order = find_grasp_neighboor_sequence(sequences_set, grasp_initial_order)
+        best_neighboor_solution = len(best_neighboor_sequence)
 
-    return common_supersequence_list(sequences_set, new_order), new_order
+        if best_solution > best_neighboor_solution:
+            best_solution = best_neighboor_solution
+            best_sequence = best_neighboor_sequence
+            best_order = best_neighboor_order
 
-def simulated_annealing(sequences_set, t_min, t_max):
-    t = t_max
-    #best_sequence, best_order = overlay_first_heuristic(sequences_set)
-    best_sequence, best_order = random_heuristic(sequences_set)
-    print("greedy_length: ", len(best_sequence))
-    print(best_sequence)
-    
-    better = 1200
-    count_equal = 0
-    while(t > t_min):
-        neighboor_sequence, neighboor_order = find_random_neighboor_sequence(sequences_set, best_order)
-        fitness = len(neighboor_sequence) - len(best_sequence)
-        probability_coeficient = random.uniform(0.0, 1.0)
-        decision_coeficient = math.exp(-fitness/t)
-        count_equal += 1
+    #print("grasp_local: ", best_solution, best_sequence, best_order)
+    return best_sequence, best_order
 
-        if fitness <= 0 or (fitness > 0 and probability_coeficient <= decision_coeficient):
-            best_sequence, best_order = neighboor_sequence, neighboor_order
-            if(better > len(best_sequence)):
-                print(count_equal)
-                count_equal = 0
-                better = len(best_sequence)
+def find_grasp_neighboor_sequence(sequences_set, sequence_order):
+    #rand_sequence = random.randint(0, len(sequence_order) - 2) #vizinho será obtido alterando a posição de uma sequência à direita; assim a última sequência da lista não trocará com ngm (a não ser q a seq anterior a ela faça isso)
+    order_1 = [] + sequence_order
+    cur_length = common_supersequence_list(sequences_set, order_1)
+    for i in range(0, len(sequence_order) - 1):
+        order_2 = [] + order_1
+        order_2[i] = order_1[i + 1]
+        order_2[i + 1] = order_1[i]
 
-        t = t * 0.99
-        #t = t * random.uniform(0.8, 0.99)
-        #t = t * (math.exp((random.uniform(0.1, 0.9) * -t)/sigma)) 
-    print("better_length: ", better)
+        new_length = common_supersequence_list(sequences_set, order_2)
+
+        if new_length < cur_length:
+            order_1 = order_2
+            cur_length = new_length
+
+    return common_supersequence_list(sequences_set, order_1), order_1
+
+def grasp(sequences_set, max_iter):
+    #print(best_order)
+    grasp_initial, grasp_initial_order = grasp_construction(sequences_set)
+    #print("grasp_iter: ", grasp_initial, grasp_initial_order)
+    best_sequence, best_order = grasp_localsearch(sequences_set, grasp_initial, grasp_initial_order)
+    best_length = len(best_sequence)
+
+    for i in range(0, max_iter):
+        #print("i: ", i)
+        #a = input()
+        grasp_initial, grasp_initial_order = grasp_construction(sequences_set)
+        #print("grasp_iter: ", grasp_initial, grasp_initial_order)
+        new_sequence, new_order = grasp_localsearch(sequences_set, grasp_initial, grasp_initial_order)
+        new_length = len(new_sequence)
+        
+        if(best_length > new_length):
+            best_length = new_length
+            best_sequence = new_sequence
+            best_order = new_order
+    #print("grasp_local: ", best_length, best_sequence, best_order)
     return best_sequence, best_order
 
 if __name__ == "__main__":
@@ -190,11 +254,23 @@ if __name__ == "__main__":
     t_min = 0.0005
     '''
     t_min = 0.1
-    t_max = 100000000000000000
+    t_max = 1000000000
+    max_iter = 500
 
     #sequences_set = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
     sequences_set = get_data("scs_problem_samples.txt")
-    print(grasp_construction(sequences_set))
-    msc, order = simulated_annealing(sequences_set, t_min, t_max)
-    print("sa_length: ", len(msc))
-    print(msc)
+    #print(grasp_construction(sequences_set))
+    solution1, order1 = greedy_algorithm(sequences_set)
+    solution2, order2 = simulated_annealing(sequences_set, t_min, t_max)
+    solution3, order3 = grasp(sequences_set, max_iter)
+
+    print("greedy: ", len(solution1))
+    print(solution1)
+
+    print("sa_length: ", len(solution2))
+    print(solution2)
+
+    print("grasp: ", len(solution3))
+    print(solution3)
+
+#tornar sequences_set uma variável global
