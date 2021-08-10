@@ -1,20 +1,11 @@
 #import sys
 import random
 import math
-import data_generator as dg
-import time
+#import data_generator as dg
 
-#sequences_list = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
-sequences_list = dg.get_data("samples.txt")
-'''
-sigma = 0.09
-t_max = 100
-t_min = 0.0005
-'''
-t_min = 0.1
-t_max = 1000000000
-max_iter = 500
-max_time = 120
+#exemplo simples, apenas para visualização do retorno de cada heurística de construção
+sequences_list = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
+#sequences_list = dg.get_data("samples.txt")
 
 def overlay(seq1, seq2): #calcula a quantidade de caracteres que podem ser sobrepostos, do final da sequencia 1 com o começo da sequência 2
     '''
@@ -59,6 +50,7 @@ def common_supersequence_list(order): #calcula a supersequência comum para sequ
         overlay_seq = common_supersequence(overlay_seq, sequences_list[order[j]])
     return overlay_seq
 
+#simulated annealing: heurística gulosa para geração de solução inicial
 def greedy_algorithm(): #encontra a solução do problema escolhendo as primeiras sequências com maior sobreposição
     seq_list_indexes = list(range(0, len(sequences_list))) #lista com os índices da lista de sequências; com a execução do algoritmo, irá conter também sublistas de índices, para simbolizar sequências sobrepostas
 
@@ -102,6 +94,7 @@ def greedy_algorithm(): #encontra a solução do problema escolhendo as primeira
 
     return common_supersequence_list(seq_list_indexes[0]), seq_list_indexes[0]
 
+#simulated annealing: heurística aleatória para geração de solução inicial
 def random_heuristic(): #gera uma supersequência com ordenação aleatória das sequências
     indexes_order = []
 
@@ -112,80 +105,7 @@ def random_heuristic(): #gera uma supersequência com ordenação aleatória das
     
     return common_supersequence_list(indexes_order), indexes_order
 
-def find_random_neighboor(indexes_order): #encontra uma sequência vizinha, alterando a posição dos índices usados para formar a supersequência
-    rand_sequence = random.randint(0, len(indexes_order) - 2) #vizinho será obtido alterando a posição de uma sequência com outra sequência à direita; assim a última sequência da lista não trocará com ngm (a não ser q a seq anterior a ela faça isso)
-    new_order = [] + indexes_order
-    new_order[rand_sequence] = indexes_order[rand_sequence + 1]
-    new_order[rand_sequence + 1] = indexes_order[rand_sequence]
-
-    return common_supersequence_list(new_order), new_order
-
-def simulated_annealing(initial_sequence, initial_indexes_order): #verifica vizinhos com perturbação nos índices que compõe a supersequência atual, caminhando pelo espaço de busca
-    t = t_max
-    #best_sequence, best_indexes_order = greedy_algorithm() #solução gerada pelo algoritmo guloso que resolve o problema
-    #random_heuristic() #solução inicial gerada por uma heurística aleatória
-    best_sequence, best_indexes_order = initial_sequence, initial_indexes_order
-    global_best_length = len(best_sequence)
-    global_best_sequence = best_sequence
-    global_best_indexes_order = best_indexes_order
-    noimprove_count = 0
-    start_time = time.time()
-
-    while(t > t_min):
-        neighboor_sequence, neighboor_indexes_order = find_random_neighboor(best_indexes_order)
-        fitness = len(neighboor_sequence) - len(best_sequence)
-        probability_coeficient = random.uniform(0.0, 1.0)
-        decision_coeficient = math.exp(-fitness/t)
-
-        if fitness <= 0 or (fitness > 0 and probability_coeficient <= decision_coeficient):
-            best_sequence, best_indexes_order = neighboor_sequence, neighboor_indexes_order
-            if(global_best_length > len(best_sequence)):
-                global_best_length = len(best_sequence)
-                global_best_sequence = best_sequence
-                global_best_indexes_order = best_indexes_order
-                #print("improve_iter:", noimprove_count)
-                noimprove_count = 0
-            else:
-                noimprove_count += 1
-        else:
-            noimprove_count += 1
-        t = t * 0.999
-
-        if noimprove_count == 5000:
-            t += noimprove_count
-            best_sequence, best_indexes_order = initial_sequence, initial_indexes_order
-            noimprove_count = 0
-        
-
-        #print("noimprove_iter:", noimprove_count)
-        running_time = time.time() - start_time
-
-        if running_time > max_time:
-            #print("running_time:", running_time)
-            break
-        #t = t * random.uniform(0.8, 0.99)
-        #t = t * (math.exp((random.uniform(0.1, 0.9) * -t)/sigma)) 
-        
-    return global_best_sequence, global_best_indexes_order
-
-def find_grasp_neighboor_sequence(indexes_order): #encontra a melhor sequência vizinha, modificando os índices dois a dois
-    best_indexes_order = [] + indexes_order #lista ordenada de índices da solução inicial
-    best_length = len(common_supersequence_list(best_indexes_order)) #comprimento da supersequência associada a lista ordenada de índices da solução inicial
-
-    for i in range(0, len(indexes_order) - 1):
-        modified_indexes_order = [] + best_indexes_order
-        modified_indexes_order[i] = best_indexes_order[i + 1] #trocamos o índice i de modified_indexes_order pelo índice i+1
-        modified_indexes_order[i + 1] = best_indexes_order[i]
-
-        new_sequence = common_supersequence_list(modified_indexes_order)
-        new_length = len(new_sequence)
-
-        if new_length < best_length:
-            best_indexes_order = modified_indexes_order
-            best_length = new_length
-
-    return common_supersequence_list(best_indexes_order), best_indexes_order
-
+#grasp: heurística de construção de solução inicial
 def grasp_construction(): #constrói a solução inicial, uma lista ordenada de índices; verifica o par com maior sobreposição, escolhido aleatoriamente se houver mais de um; depois verifica um índice por vez, qual o próximo par com maior sobreposição
     best_overlay_count = -1
     constructed_indexes_order = []
@@ -230,85 +150,17 @@ def grasp_construction(): #constrói a solução inicial, uma lista ordenada de 
         
     return common_supersequence_list(constructed_indexes_order), constructed_indexes_order
 
-def grasp_localsearch(grasp_initial, grasp_initial_order): #verifica se os vizinhos são melhores que a solução inicial
-    best_length = len(grasp_initial)
-    best_sequence = grasp_initial
-    best_indexes_order = grasp_initial_order
-
-    best_neighboor_sequence, best_neighboor_order = find_grasp_neighboor_sequence(grasp_initial_order) #verifica entre os vizinhos qual o melhor
-    best_neighboor_length = len(best_neighboor_sequence)
-
-    if best_length > best_neighboor_length: #se o melhor vizinho tiver comprimento menor que a solução inicial, atualiza
-        best_length = best_neighboor_length
-        best_sequence = best_neighboor_sequence
-        best_indexes_order = best_neighboor_order
-
-    return best_sequence, best_indexes_order
-
-def grasp():
-    grasp_initial, grasp_initial_order = grasp_construction()
-    best_sequence, best_order = grasp_localsearch(grasp_initial, grasp_initial_order)
-    best_length = len(best_sequence)
-    start_time = time.time()
-
-    for i in range(0, max_iter):
-        grasp_initial, grasp_initial_order = grasp_construction()
-        new_sequence, new_order = grasp_localsearch(grasp_initial, grasp_initial_order)
-        new_length = len(new_sequence)
-        
-        if(best_length > new_length):
-            best_length = new_length
-            best_sequence = new_sequence
-            best_order = new_order
-        
-        running_time = time.time() - start_time
-
-        if running_time > max_time:
-            #print("running_time:", running_time)
-            break
-
-    return best_sequence, best_order
-
 if __name__ == "__main__":
-    random_start_sequence, random_start_indexes_order = random_heuristic()
-    solution1, order1 = greedy_algorithm()
-    solution2, order2 = simulated_annealing(solution1, order1) #sa1: start: greedy
-    solution3, order3 = simulated_annealing(random_start_sequence, random_start_indexes_order) #sa1: start: random
-    solution4, order4 = grasp()
+    
+    sa1, sa_order1 = greedy_algorithm()
+    sa2, sa_order2 = random_heuristic()
+    grasp, grasp_order = grasp_construction()
 
-    print("SOLUTION\t\t\tLENGTH\tDISTANCE TO SUM OF ALL SEQUENCES")
+    print("greedy_length: ", len(sa1))
+    print(sa1)
 
-    length_count = 0
-    for i in range(0, len(sequences_list)):
-        length_count += len(sequences_list[i])
-    print("sum_sequences_length \t\t", length_count, "\t\t\t", 0)
+    print("sa_length: ", len(sa2))
+    print(sa2)
 
-    print("greedy_length \t\t\t", len(solution1), "\t\t\t", length_count - len(solution1))
-    #print(solution1)
-
-    print("sa1_length_greedy \t\t", len(solution2), "\t\t\t", length_count - len(solution2))
-    #print(solution2)
-
-    print("random_heuristic_length \t", len(random_start_sequence), "\t\t\t", length_count - len(random_start_sequence))
-
-    print("sa1_length_random \t\t", len(solution3), "\t\t\t", length_count - len(solution3))
-    #print(solution3)
-
-
-    print("grasp_length \t\t\t", len(solution4), "\t\t\t", length_count - len(solution4))
-    #print(solution4)
-
-'''
-seções:
-introdução
-revisão da literatura
-metodologias usadas (gerador incluso)
-resultados
-conclusão
-
-relatório - tabela - média das soluções - no mínimo 3 execuções - tempo
-sa_1
-sa_2
-grasp
-greedy
-'''
+    print("grasp_length: ", len(grasp))
+    print(grasp)

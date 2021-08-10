@@ -15,19 +15,17 @@ def set_data(data_file, sequences_list): #escreve uma lista de sequências gerad
 def get_data(data_file): #pega as sequências de um arquivo .txt e armazena em uma lista
     data_file = open(data_file, "r")
     sequences_list = data_file.readlines()
-    length_count = 0
+    
     for i in range(0, len(sequences_list)):
         sequences_list[i] = sequences_list[i].replace("\n", "")
-        length_count += len(sequences_list[i])
-    print("total_length:", length_count)
-    #print("---------------------------------------")
+
     data_file.close()
     return sequences_list
 
 if __name__ == "__main__":
     alphabet = list(char_range('a', 'h'))
-    max_sequence_length = 20
-    min_sequence_length = 8
+    max_sequence_length = 50
+    min_sequence_length = len(alphabet)
     qtd_sequences = 50
     sequences_list = []
     #print(alphabet)
