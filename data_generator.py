@@ -15,7 +15,7 @@ def set_data(data_file, sequences_list): #escreve uma lista de sequências gerad
 def get_data(data_file): #pega as sequências de um arquivo .txt e armazena em uma lista
     data_file = open(data_file, "r")
     sequences_list = data_file.readlines()
-    
+
     for i in range(0, len(sequences_list)):
         sequences_list[i] = sequences_list[i].replace("\n", "")
 
@@ -24,7 +24,7 @@ def get_data(data_file): #pega as sequências de um arquivo .txt e armazena em u
 
 if __name__ == "__main__":
     alphabet = list(char_range('a', 'h'))
-    max_sequence_length = 50
+    max_sequence_length = 100
     min_sequence_length = len(alphabet)
     qtd_sequences = 50
     sequences_list = []
