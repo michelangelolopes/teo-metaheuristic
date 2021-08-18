@@ -4,21 +4,6 @@ import math
 import data_generator as dg
 import time
 
-#sequences_list = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
-sequences_list = dg.get_data("samples.txt")
-
-'''
-sigma = 0.09
-t_max = 100
-t_min = 0.0005
-'''
-
-t_min = 1
-t_max = 15
-cooling_coefficient = 0.99999
-max_iter = 1000
-max_time = 20 # multiplicado por três, pois são três metaheurísticas rodando (aproximadamente)
-
 def overlay(seq1, seq2): #calcula a quantidade de caracteres que podem ser sobrepostos, do final da sequencia 1 com o começo da sequência 2
     '''
     exemplo: (aaa, aab) -> aa -> count = 2
@@ -64,31 +49,38 @@ def common_supersequence_list(order): #calcula a supersequência comum para sequ
 
 def greedy_algorithm(): #encontra a solução do problema escolhendo as primeiras sequências com maior sobreposição
     seq_list_indexes = list(range(0, len(sequences_list))) #lista com os índices da lista de sequências; com a execução do algoritmo, irá conter também sublistas de índices, para simbolizar sequências sobrepostas
+    count = 0
 
     while len(seq_list_indexes) > 1: #o algoritmo para, quando houver apenas uma sublista de índices
         best_overlay_count = -1
         best_overlay_list_count = []
         seq_list_values = [] #lista com as sequências associadas aos elementos da lista de índices
 
+        time_1 = time.time()
         for i in seq_list_indexes: #verificamos a lista de índices de seq; ao final, teremos uma lista com as sequências e não seus indíces
             if(isinstance(i, list)): #se o índice for uma sublista de índices, precisamos da supersequência associada a sublista
                 seq_list_values.append(common_supersequence_list(i))
             else: #se for apenas um índice, adicionamos a sequência associada ao índice apenas
                 seq_list_values.append(sequences_list[i])
+            #print("time_1: ", time.time() - time_1)
 
+        time_2 = time.time()
         for i in range(0, len(seq_list_values)): #buscamos as sequências com maior sobreposição
             for j in range(0, len(seq_list_values)):
                 if(i == j):
                     continue
 
                 overlay_count = overlay(seq_list_values[i], seq_list_values[j])
+                count += 1
 
                 if(best_overlay_count < overlay_count): #quando duas sequências tiveram a maior sobreposição da iteração
                     best_overlay_count = overlay_count #atualizamos a variável de controle da melhor sobreposição da iteração
                     best_overlay_list_count = [i, j] #armazenamos uma lista com os índices das sequências com maior sobreposição; índices relacionados à lista de índices
+            #print("time_2: ", time.time() - time_2)
 
         superseq = []
         toremove = []
+        time_3 = time.time()
         for i in best_overlay_list_count: #convertemos os índices da lista de índices para os índices da lista de sequências
             aux = seq_list_indexes[i] #pegamos o índice associado na lista de índices
             
@@ -97,11 +89,15 @@ def greedy_algorithm(): #encontra a solução do problema escolhendo as primeira
             else: #se for uma sublista de índices, concatenamos com os índices da lista de supersequência
                 superseq += aux
             toremove.append(aux) #adicionamos os índices a serem removidos por valor, da lista de índices
+            #print("time_3: ", time.time() - time_3)
         
+        time_4 = time.time()
         for i in toremove: #removemos os índices com maior sobreposição da lista de índices
             seq_list_indexes.remove(i)
+            #print("time_4: ", time.time() - time_4)
             
         seq_list_indexes.append(superseq) #adicionamos a supersequência com maior sobreposição à lista de índices
+        #print("count: ", count)
 
     return common_supersequence_list(seq_list_indexes[0]), seq_list_indexes[0]
 
@@ -124,7 +120,7 @@ def find_random_neighboor(indexes_order): #encontra uma sequência vizinha, alte
     return common_supersequence_list(new_order), new_order
 
 def find_random_distant_neighboor(indexes_order): #encontra uma sequência vizinha, alterando 10% das posição dos índices usados para formar a supersequência
-    changes_count = int(0.1 * len(sequences_list))
+    changes_count = int(0.5 * len(sequences_list))
     already_changed = []
 
     while changes_count > -1:
@@ -138,24 +134,21 @@ def find_random_distant_neighboor(indexes_order): #encontra uma sequência vizin
 
     return common_supersequence_list(new_order), new_order
 
-def find_interesting_neighboor(indexes_order, worst_overlay):
+def find_neighboor_changingWorstOverlays(indexes_order, worst_overlay):
     overlay_list = []
     options_list = []
 
     for i in range(1, len(indexes_order) - 1):
         overlay_left = overlay(sequences_list[indexes_order[i - 1]], sequences_list[indexes_order[i]])
         overlay_right = overlay(sequences_list[indexes_order[i]], sequences_list[indexes_order[i + 1]])
-        total_overlay = overlay_left + overlay_right
-        overlay_list.append(total_overlay)
-    
-    #for i in range(0, len(indexes_order) - 2):
-        #print(i + 1, ": ", overlay_list[i], overlay_list[i][0] + overlay_list[i][1])
+        sum_overlay = overlay_left + overlay_right
+        overlay_list.append(sum_overlay)
 
     for i in range(0, len(indexes_order) - 2):
         if overlay_list[i] <= worst_overlay:
             options_list.append(i + 1)
 
-    while options_list == []:
+    while len(options_list) <= 1:
         worst_overlay += 1
         for i in range(0, len(indexes_order) - 2):
             if overlay_list[i] <= worst_overlay:
@@ -176,72 +169,56 @@ def find_interesting_neighboor(indexes_order, worst_overlay):
 
     return common_supersequence_list(new_order), new_order
 
-def simulated_annealing(initial_sequence, initial_indexes_order): #verifica vizinhos com perturbação nos índices que compõe a supersequência atual, caminhando pelo espaço de busca
+def update_worst_overlay(worst_overlay, is_increasing):
+    if worst_overlay == 4 and is_increasing == 1:
+        is_increasing = 0
+    elif worst_overlay == 0 and is_increasing == 0:
+        is_increasing = 1
+
+    if is_increasing == 1:
+        worst_overlay += 1
+    elif is_increasing == 0:
+        worst_overlay -= 1
+
+    return worst_overlay, is_increasing
+
+def simulated_annealing_worstOverlayNeighboor(initial_sequence, initial_indexes_order): #verifica vizinhos com perturbação nos índices que compõe a supersequência atual, caminhando pelo espaço de busca
     t = t_max
-    #best_sequence, best_indexes_order = greedy_algorithm() #solução gerada pelo algoritmo guloso que resolve o problema
-    #random_heuristic() #solução inicial gerada por uma heurística aleatória
     best_sequence, best_indexes_order = initial_sequence, initial_indexes_order
     global_best_length = len(best_sequence)
     global_best_sequence = best_sequence
     global_best_indexes_order = best_indexes_order
-    noimprove_count = 0
     start_time = time.time()
-
-    #print("length: ", global_best_length)
-    #print_overlay_indexes_order(initial_indexes_order)
-
-    prob_count = 0
-    dec_count = 0
-    worst_overlay = 1
+    worst_overlay = 0
     noimprove_weight = 1
+    noimprove_time = time.time()
+    is_increasing = 1
+    time_toChangeOverlay = max_time/12
+
+    max_noimprove_time = 20
+
+    if max_time < max_noimprove_time * 4:
+        max_noimprove_time = max_time / 3
 
     while(t > t_min):
-        if noimprove_weight == 2:
-            #print("neighboor reset")
-            #print("noimprove_iter:", noimprove_count)
-            #print("worst_overlay: ", worst_overlay)
-            #print("time: ", t)
-            neighboor_sequence, neighboor_indexes_order = initial_sequence, initial_indexes_order
-            #worst_overlay = 1 #talvez não resetar
+        if noimprove_weight == 3:
+            neighboor_sequence, neighboor_indexes_order = find_random_distant_neighboor(best_indexes_order)
             noimprove_weight = 1
-            noimprove_count = 0
-            t = t * 1.5
 
-        if noimprove_count == (noimprove_weight * max_time * 300):
-            t = t * 1.2
-            worst_overlay += 1
-            #print("worst overlay increment")
-            #print("noimprove_iter:", noimprove_count)
-            #print("worst_overlay: ", worst_overlay)
-            #print("time: ", t)
-            #print("length: ", len(neighboor_sequence))
-            #print_overlay_indexes_order(neighboor_indexes_order)
-            #neighboor_sequence, neighboor_indexes_order = find_random_distant_neighboor(best_indexes_order)
-            neighboor_sequence, neighboor_indexes_order = find_interesting_neighboor(best_indexes_order, worst_overlay)
+        if (time.time() - noimprove_time) >= time_toChangeOverlay:
+            noimprove_time = time.time()
+            worst_overlay, is_increasing = update_worst_overlay(worst_overlay, is_increasing)
+
+        if (time.time() - noimprove_time) == max_noimprove_time * noimprove_weight:
+            neighboor_sequence, neighboor_indexes_order = find_neighboor_changingWorstOverlays(best_indexes_order, worst_overlay)
             noimprove_weight += 1
-            #noimprove_count = 0
         else:
-            neighboor_sequence, neighboor_indexes_order = find_interesting_neighboor(best_indexes_order, worst_overlay)
-            #neighboor_sequence, neighboor_indexes_order = find_random_neighboor(best_indexes_order)
+            neighboor_sequence, neighboor_indexes_order = find_neighboor_changingWorstOverlays(best_indexes_order, worst_overlay)
 
-        #pause = input()
         fitness = len(neighboor_sequence) - len(best_sequence)
         probability_coeficient = random.uniform(0.7, 1.0)
         decision_coeficient = math.exp(-fitness/t)
         coeficient_comparison = (probability_coeficient <= decision_coeficient)
-
-        if coeficient_comparison == True:
-            dec_count += 1
-        else:
-            prob_count += 1
-
-        #if fitness > 0:
-            #print("prob: ", probability_coeficient)
-            #print("dec:  ", decision_coeficient)
-            #print("fit:  ", fitness)
-            #print("time: ", t)
-            #print(coeficient_comparison)
-            #pause = input()
 
         if fitness <= 0 or (fitness > 0 and coeficient_comparison):
             best_sequence, best_indexes_order = neighboor_sequence, neighboor_indexes_order
@@ -249,32 +226,67 @@ def simulated_annealing(initial_sequence, initial_indexes_order): #verifica vizi
                 global_best_length = len(best_sequence)
                 global_best_sequence = best_sequence
                 global_best_indexes_order = best_indexes_order
-                #print("improve_iter:", noimprove_count)
-                noimprove_count = 0
+                noimprove_time = time.time()
                 noimprove_weight = 1
-                #print("dec: ", dec_count, "prob: ", prob_count, "time: ", t, "length: ", global_best_length)
-                dec_count = 0
-                prob_count = 0
-                #print("global change")
-                #print("running_time:", time.time() - start_time)
-                #print("length: ", global_best_length)
-                #print("time: ", t)
-                #print_overlay_indexes_order(best_indexes_order)
-            else:
-                noimprove_count += 1
-        else:
-            noimprove_count += 1
-        t = t * cooling_coefficient
-        #t = t * random.uniform(0.8, 0.99)
-        #t = t * (math.exp((random.uniform(0.1, 0.9) * -t)/sigma)) 
+                if t <= 2:
+                    t = t * 2
 
+        t = t * cooling_coefficient
         running_time = time.time() - start_time
 
         if running_time > max_time:
             break
-    #print("running_time:", running_time)
-    #print("noimprove_count:", noimprove_count)
-    #print("-------------------")
+    
+    return global_best_sequence, global_best_indexes_order
+
+def simulated_annealing_randomNeighboor(initial_sequence, initial_indexes_order): #verifica vizinhos com perturbação nos índices que compõe a supersequência atual, caminhando pelo espaço de busca
+    t = t_max
+    best_sequence, best_indexes_order = initial_sequence, initial_indexes_order
+    global_best_length = len(best_sequence)
+    global_best_sequence = best_sequence
+    global_best_indexes_order = best_indexes_order
+    start_time = time.time()
+    noimprove_weight = 1
+    noimprove_time = time.time()
+
+    max_noimprove_time = 20
+
+    if max_time < max_noimprove_time * 4:
+        max_noimprove_time = max_time / 3
+
+    while(t > t_min):
+        if noimprove_weight == 3:
+            neighboor_sequence, neighboor_indexes_order = find_random_distant_neighboor(best_indexes_order)
+            noimprove_weight = 1
+
+        if (time.time() - noimprove_time) == max_noimprove_time * noimprove_weight:
+            neighboor_sequence, neighboor_indexes_order = find_random_neighboor(best_indexes_order)
+            noimprove_weight += 1
+        else:
+            neighboor_sequence, neighboor_indexes_order = find_random_neighboor(best_indexes_order)
+
+        fitness = len(neighboor_sequence) - len(best_sequence)
+        probability_coeficient = random.uniform(0.7, 1.0)
+        decision_coeficient = math.exp(-fitness/t)
+        coeficient_comparison = (probability_coeficient <= decision_coeficient)
+
+        if fitness <= 0 or (fitness > 0 and coeficient_comparison):
+            best_sequence, best_indexes_order = neighboor_sequence, neighboor_indexes_order
+            if(global_best_length > len(best_sequence)):
+                global_best_length = len(best_sequence)
+                global_best_sequence = best_sequence
+                global_best_indexes_order = best_indexes_order
+                noimprove_time = time.time()
+                noimprove_weight = 1
+                if t <= 2:
+                    t = t * 2
+
+        t = t * cooling_coefficient
+        running_time = time.time() - start_time
+
+        if running_time > max_time:
+            break
+    
     return global_best_sequence, global_best_indexes_order
 
 def find_grasp_neighboor_sequence(indexes_order): #encontra a melhor sequência vizinha, modificando os índices dois a dois
@@ -354,7 +366,38 @@ def grasp_localsearch(grasp_initial, grasp_initial_order): #verifica se os vizin
 
     return best_sequence, best_indexes_order
 
-def grasp():
+def grasp_worstOverlay():
+    worst_overlay = 0
+    is_increasing = 1
+    _, grasp_initial_order = grasp_construction()
+    best_sequence, best_order = find_neighboor_changingWorstOverlays(grasp_initial_order, worst_overlay)
+    best_length = len(best_sequence)
+    start_time = time.time()
+    iter_count = 0
+
+    for i in range(0, max_iter):
+        _, grasp_initial_order = grasp_construction()
+        new_sequence, new_order = find_neighboor_changingWorstOverlays(grasp_initial_order, worst_overlay)
+        new_length = len(new_sequence)
+        
+        if(best_length > new_length):
+            best_length = new_length
+            best_sequence = new_sequence
+            best_order = new_order
+
+        if iter_count == 5:
+            worst_overlay, is_increasing = update_worst_overlay(worst_overlay, is_increasing)
+            iter_count = 0
+        
+        iter_count += 1
+        running_time = time.time() - start_time
+
+        if running_time > max_time:
+            break
+
+    return best_sequence, best_order
+
+def grasp_betterSubsequentNeighboor():
     grasp_initial, grasp_initial_order = grasp_construction()
     best_sequence, best_order = grasp_localsearch(grasp_initial, grasp_initial_order)
     best_length = len(best_sequence)
@@ -373,7 +416,6 @@ def grasp():
         running_time = time.time() - start_time
 
         if running_time > max_time:
-            #print("running_time:", running_time)
             break
 
     return best_sequence, best_order
@@ -385,53 +427,95 @@ def print_overlay_indexes_order(indexes_order):
         print(overlay(sequences_list[indexes_order[i]], sequences_list[indexes_order[i + 1]]), end=" ")
     print()
 
-if __name__ == "__main__":
-
-    print("SOLUTION\t\t\tLENGTH\tDISTANCE TO SUM OF ALL SEQUENCES")
-
+def concatenation_supersequence():
     length_count = 0
     for i in range(0, len(sequences_list)):
         length_count += len(sequences_list[i])
-    print("sum_sequences_length \t\t", length_count, "\t\t\t", 0)
+    return length_count
+
+if __name__ == "__main__":
+
+    sequences_list = dg.get_data("samples/samples-100_100.txt")
+
+    t_min = 1
+    t_max = 10
+    cooling_coefficient = 0.99999
+    max_iter = 1200
+    max_time = 30 # multiplicado por três, pois são três metaheurísticas rodando (aproximadamente)
+    print("SOLUTION\t\t\tLENGTH\tDISTANCE TO SUM OF ALL SEQUENCES")
+
+    total_length = concatenation_supersequence()
+    print("sum_sequences_length \t\t", total_length, "\t\t\t", 0)
 
     solution1, order1 = greedy_algorithm()
-    print("greedy_length \t\t\t", len(solution1), "\t\t\t", length_count - len(solution1))
-    #solution2, order2 = simulated_annealing(solution1, order1) #sa1: start: greedy
-    #print("sa1_length_greedy \t\t", len(solution2), "\t\t\t", length_count - len(solution2))
+    print("greedy_length \t\t\t", len(solution1), "\t\t\t", total_length - len(solution1))
     random_start_sequence, random_start_indexes_order = random_heuristic()
-    print("random_heuristic_length \t", len(random_start_sequence), "\t\t\t", length_count - len(random_start_sequence))
-    solution3, order3 = simulated_annealing(random_start_sequence, random_start_indexes_order) #sa1: start: random
-    print("sa2_length_random \t\t", len(solution3), "\t\t\t", length_count - len(solution3))
-    solution4, order4 = grasp()
-    print("grasp_length \t\t\t", len(solution4), "\t\t\t", length_count - len(solution4))
+    solution2, order2 = simulated_annealing_worstOverlayNeighboor(random_start_sequence, random_start_indexes_order)
+    print("sa1_length \t\t\t", len(solution2), "\t\t\t", total_length - len(solution2))
+    #print("random_heuristic_length \t", len(random_start_sequence), "\t\t\t", total_length - len(random_start_sequence))
+    solution3, order3 = simulated_annealing_randomNeighboor(random_start_sequence, random_start_indexes_order)
+    print("sa2_length \t\t\t", len(solution3), "\t\t\t", total_length - len(solution3))
+    solution4, order4 = grasp_betterSubsequentNeighboor()
+    print("grasp1_length \t\t\t", len(solution4), "\t\t\t", total_length - len(solution4))
+    solution5, order5 = grasp_worstOverlay()
+    print("grasp2_length \t\t\t", len(solution5), "\t\t\t", total_length - len(solution5))
 
-    #print(solution1)
-    
-    #print_overlay_indexes_order(order1)
-    #print_overlay_indexes_order(random_start_indexes_order)
-    
-
-    #interesting_sequence, interesting_order = find_interesting_neighboor(random_start_indexes_order)
-    #print("interesting_neighboor_length \t", len(interesting_sequence), "\t\t\t", length_count - len(interesting_sequence))
-    #print_overlay_indexes_order(interesting_order)
-
-    #print(solution2)
-
-    #print(solution3)
-
-    #print(solution4)
 
 '''
-seções:
-introdução
-revisão da literatura --- subseção: aplicações no mundo real
-metodologias usadas (gerador incluso)
-resultados
-conclusão
+if __name__ == "__main__":
 
-relatório - tabela (marcar as melhores soluções/comparar pelo tempo gasto) - média das soluções - no mínimo 3 execuções - tempo
-sa_1
-sa_2
-grasp
-greedy
+    sample_list = ["samples/samples-100_100.txt"]
+    #"samples/samples-50_20.txt", "samples/samples-50_50.txt", "samples/samples-50_100.txt", 
+    #max_time_list = [10, 30, 60]
+    max_time_list = [90, 120]
+    #max_time_list = [1, 1]
+    execution_times = 1
+    t_min = 1
+    t_max = 10
+    cooling_coefficient = 0.99999
+    max_iter = 1200
+    results_file = "results2.csv"
+    #sequences_list = ["aaa", "aab", "abb", "bba", "baa", "bbb"]
+    #sequences_list = dg.get_data("samples.txt")
+    
+    #sigma = 0.09
+    #t_max = 100
+    #t_min = 0.0005
+    
+
+    data_file = open(results_file, "w")
+    data_file.writelines("MÉTODO; COMPRIMENTO DA SUPERSEQUÊNCIA COMUM; DISTÂNCIA PARA A SUPERSEQUÊNCIA COMUM MAIS SIMPLES; TEMPO DE EXECUÇÃO;\n")
+    for i in sample_list:
+        sequences_list = dg.get_data(i)
+        random_start_sequence, random_start_indexes_order = random_heuristic()
+        time1 = time.time()
+        total_length = concatenation_supersequence()
+        time2 = time.time()
+        greedy, _ = greedy_algorithm()
+        time3 = time.time()
+
+        data_file.writelines("simplier; " + str(total_length) + "; " + str(total_length - total_length) + "; " + str(round(time2 - time1, 3)) + "s;\n")
+        data_file.writelines("greedy; " + str(len(greedy)) + "; " + str(total_length - len(greedy)) + "; " + str(round(time3 - time2, 3)) + "s;\n")
+
+        for j in max_time_list:
+            max_time = j
+            data_file.writelines("TEMPO; " + str(max_time) + ";;\n")
+
+            for k in range(0, execution_times):
+                data_file.writelines("RODADA; " + str(k + 1) + ";;\n")
+                time1 = time.time()
+                sa1, _ = simulated_annealing_worstOverlayNeighboor(random_start_sequence, random_start_indexes_order)
+                time2 = time.time()
+                #sa2, _ = simulated_annealing_randomNeighboor(random_start_sequence, random_start_indexes_order)
+                time3 = time.time()
+                grasp1, _ = grasp_betterSubsequentNeighboor()
+                time4 = time.time()
+                #grasp2, _ = grasp_worstOverlay()
+                time5 = time.time()
+                data_file.writelines("sa 1; " + str(len(sa1)) + "; " + str(total_length - len(sa1)) + "; " + str(round(time2 - time1, 3)) + "s;\n")
+                #data_file.writelines("sa 2; " + str(len(sa2)) + "; " + str(total_length - len(sa2)) + "; " + str(round(time3 - time2, 3)) + "s;\n")
+                data_file.writelines("grasp 1; " + str(len(grasp1)) + "; " + str(total_length - len(grasp1)) + "; " + str(round(time4 - time3, 3)) + "s;\n")
+                #data_file.writelines("grasp 2; " + str(len(grasp2)) + "; " + str(total_length - len(grasp2)) + "; " + str(round(time5 - time4, 3)) + "s;\n")
+
+    data_file.close()
 '''

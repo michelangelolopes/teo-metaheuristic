@@ -23,10 +23,10 @@ def get_data(data_file): #pega as sequências de um arquivo .txt e armazena em u
     return sequences_list
 
 if __name__ == "__main__":
-    alphabet = list(char_range('a', 'h'))
+    alphabet = list(char_range('a', 'z'))
     max_sequence_length = 100
     min_sequence_length = len(alphabet)
-    qtd_sequences = 50
+    qtd_sequences = 1000
     sequences_list = []
     #print(alphabet)
 
